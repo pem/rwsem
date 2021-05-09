@@ -1,6 +1,5 @@
-# $Id: $
 #
-# Per-Erik Martin (pem@mbp.local) 2021-05-08
+# pem 2021-05-08
 #
 #
 
