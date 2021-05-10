@@ -6,21 +6,7 @@
 */
 
 #include <stdlib.h>
-#include <semaphore.h>
 #include "rwsem.h"
-
-struct rwsem_s
-{
-    sem_t write;
-    sem_t mutex;
-    uint64_t readers;
-};
-
-size_t
-rwsem_size(void)
-{
-    return sizeof(struct rwsem_s);
-}
 
 void
 rwsem_status(rwsem_t *rwsp, int *mutexp, int *writep, uint64_t *readersp)

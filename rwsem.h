@@ -10,10 +10,15 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <semaphore.h>
 
-typedef struct rwsem_s rwsem_t;
+typedef struct rwsem_s
+{
+    sem_t write;
+    sem_t mutex;
+    uint64_t readers;
+}  rwsem_t;
 
-size_t rwsem_size(void);
 bool rwsem_init(rwsem_t *rwsp);
 bool rwsem_destroy(rwsem_t *rwsp);
 bool rwsem_writelock(rwsem_t *rwsp);

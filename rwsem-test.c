@@ -42,39 +42,43 @@ perrex(char *f)
     exit(1);
 }
 
+typedef struct rwsemtest_s
+{
+    rwsem_t rwsem;
+    unsigned users;
+} rwsemtest_t;
+
 int
 main(int argc, char **argv)
 {
-    size_t mapsize = sizeof(uint64_t) + rwsem_size();
-
     int fd = shm_open("rwsem-test", O_CREAT | O_RDWR, S_IRWXU);
     if (fd < 0)
         perrex("shm_open");
-    if (ftruncate(fd, mapsize))
+    if (ftruncate(fd, sizeof(rwsemtest_t)))
         perrex("ftruncate");
 
-    void *map = mmap(0, mapsize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    rwsemtest_t *map = mmap(0, sizeof(rwsemtest_t),
+                            PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
     if (map == MAP_FAILED)
     {
         close(fd);
         perrex("mmap");
     }
     close(fd);
-    uint64_t *users = (uint64_t *)map;
-    rwsem_t *rws = (rwsem_t *)(((char *)map) + sizeof(uint64_t));
+    rwsem_t *rws = &map->rwsem;
 
     if (! rwsem_init(rws))
         perrex("rwsem_init");
 
     int m, w;
-    uint64_t  r;
+    uint64_t r;
     rwsem_status(rws, &m, &w, &r);
     printf("Intialized: %d %d %lu\n", m, w, (unsigned long)r);
 
     /* Signing in... */
     if (! rwsem_writelock(rws))
         perrex("rwsem_writelock");
-    *users += 1;
+    map->users += 1;
     if (! rwsem_writeunlock(rws))
         perrex("rwsem_writeunlock");
 
@@ -92,8 +96,8 @@ main(int argc, char **argv)
                 break;
             }
             rwsem_status(rws, &m, &w, &r);
-            printf("  ### Reading: m=%d w=%d r=%lu u=%lu\n",
-                   m, w, (unsigned long)r, (unsigned long)(*users));
+            printf("  ### Reading: m=%d w=%d r=%lu u=%u\n",
+                   m, w, (unsigned long)r, map->users);
             sleep(s);
             printf("<-- Read UNLOCK\n");
             if (! rwsem_readunlock(rws))
@@ -111,8 +115,8 @@ main(int argc, char **argv)
                 break;
             }
             rwsem_status(rws, &m, &w, &r);
-            printf("  ### Writing: m=%d w=%d r=%lu u=%lu\n",
-                   m, w, (unsigned long)r, (unsigned long)(*users));
+            printf("  ### Writing: m=%d w=%d r=%lu u=%u\n",
+                   m, w, (unsigned long)r, map->users);
             sleep(s);
             printf("<-- Write UNLOCK\n");
             if (! rwsem_writeunlock(rws))
@@ -130,8 +134,8 @@ main(int argc, char **argv)
     /* Signing out... */
     if (! rwsem_writelock(rws))
         perrex("rwsem_writelock");
-    *users -= 1;
-    if (*users == 0)
+    map->users -= 1;
+    if (map->users == 0)
         destroy = true;
     if (! rwsem_writeunlock(rws))
         perrex("rwsem_writeunlock");
@@ -143,7 +147,7 @@ main(int argc, char **argv)
             perrex("rwsem_destroy");
     }
 
-    munmap(rws, mapsize);
+    munmap(rws, sizeof(rwsemtest_t));
 
     if (destroy)
     {
