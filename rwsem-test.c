@@ -48,10 +48,12 @@ typedef struct rwsemtest_s
     unsigned users;
 } rwsemtest_t;
 
+#define SHM_NAME "/rwsem-test"
+
 int
 main(int argc, char **argv)
 {
-    int fd = shm_open("rwsem-test", O_CREAT | O_RDWR, S_IRWXU);
+    int fd = shm_open(SHM_NAME, O_CREAT | O_RDWR, S_IRWXU);
     if (fd < 0)
         perrex("shm_open");
     if (ftruncate(fd, sizeof(rwsemtest_t)))
@@ -152,7 +154,7 @@ main(int argc, char **argv)
     if (destroy)
     {
         printf("Unlinking...\n");
-        if (shm_unlink("rwsem-test") < 0)
+        if (shm_unlink(SHM_NAME) < 0)
             perrex("shm_unlink");
     }
 
