@@ -1,0 +1,5 @@
+librwsem.a
+make.deps
+rwsem-test
+rwsem-test.o
+rwsem.o
